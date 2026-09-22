@@ -10,6 +10,9 @@ staticfiles/
 media/
 
 .env
+.env.production
 .env*.local
+!.env.example
+!.env.production.example
 
 .DS_Store
