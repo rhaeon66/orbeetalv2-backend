@@ -43,7 +43,7 @@ NAVY_DEEP = HexColor("#0C2838")
 COMPANY = {
     "name": "Orbeetal",
     "tagline": "Digital products built for real impact.",
-    "origin": "https://www.orbeetal.com",
+    "origin": "https://orbeetal.com",
     "email": "support@orbeetal.com",
     "phone": "+88 01627480049",
     "location": "Dhaka, Bangladesh",
