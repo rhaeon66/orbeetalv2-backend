@@ -50,7 +50,14 @@ class LoginView(APIView):
             )
 
         login(request, user)
-        return Response({"ok": True, "user": user_payload(user)})
+        # login() rotates the CSRF secret. The SPA must store this new token.
+        return Response(
+            {
+                "ok": True,
+                "user": user_payload(user),
+                "csrfToken": get_token(request),
+            }
+        )
 
 
 class LogoutView(APIView):
@@ -58,7 +65,7 @@ class LogoutView(APIView):
 
     def post(self, request):
         logout(request)
-        return Response({"ok": True})
+        return Response({"ok": True, "csrfToken": get_token(request)})
 
 
 class MeView(APIView):

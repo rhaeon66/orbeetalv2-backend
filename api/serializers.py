@@ -903,6 +903,28 @@ def _clean_named_items(items, title_key, extra_keys):
     return cleaned
 
 
+def _clean_method_steps(items):
+    cleaned = []
+    if not isinstance(items, list):
+        return cleaned
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        title = str(item.get("title") or "").strip()
+        if not title:
+            continue
+        desc = str(item.get("desc") or "").strip()
+        raw_points = item.get("points") or []
+        if isinstance(raw_points, str):
+            points = [part.strip() for part in raw_points.splitlines() if part.strip()]
+        elif isinstance(raw_points, list):
+            points = [str(part).strip() for part in raw_points if str(part).strip()]
+        else:
+            points = []
+        cleaned.append({"title": title, "desc": desc, "points": points})
+    return cleaned
+
+
 class HomepageSerializer(MediaAttachMixin, serializers.ModelSerializer):
     media_source_map = {
         "about_image_from_media": ("about_image", "about_image_fallback"),
@@ -978,7 +1000,7 @@ class HomepageSerializer(MediaAttachMixin, serializers.ModelSerializer):
         return _clean_named_items(value or [], "title", ["description", "icon"])
 
     def validate_method_steps(self, value):
-        return _clean_named_items(value or [], "title", ["desc"])
+        return _clean_method_steps(value or [])
 
     def validate_expertise_items(self, value):
         return _clean_named_items(value or [], "title", ["description", "icon"])
@@ -1033,7 +1055,7 @@ class PublicHomepageSerializer(serializers.ModelSerializer):
             "title": obj.method_title,
             "highlight": obj.method_highlight,
             "subtitle": obj.method_subtitle,
-            "steps": _clean_named_items(obj.method_steps or [], "title", ["desc"]),
+            "steps": _clean_method_steps(obj.method_steps or []),
         }
 
     def get_expertise(self, obj):

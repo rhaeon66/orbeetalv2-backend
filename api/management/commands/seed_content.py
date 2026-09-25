@@ -831,40 +831,71 @@ HOMEPAGE = {
         },
     ],
     "method_eyebrow": "How We Work",
-    "method_title": "Our IT",
-    "method_highlight": "Methodology",
+    "method_title": "Our",
+    "method_highlight": "IT Methodology",
     "method_subtitle": (
         "A proven, transparent process that takes your idea from concept to a "
         "polished, scalable product — on time and on budget."
     ),
     "method_steps": [
         {
-            "title": "Define",
-            "desc": (
-                "We listen, research and map your goals — turning ambiguity into "
-                "a clear, measurable product strategy."
-            ),
+            "title": "Discover",
+            "desc": "Understand the problem, users, and requirements before a line of code.",
+            "points": [
+                "Business & user research",
+                "Requirements discovery",
+                "Problem definition",
+            ],
+        },
+        {
+            "title": "Plan",
+            "desc": "Turn discovery into a clear roadmap, architecture, and scope.",
+            "points": [
+                "Project roadmap",
+                "Technical planning",
+                "Architecture & scope",
+            ],
         },
         {
             "title": "Design",
-            "desc": (
-                "Research-driven UX and polished UI systems that are intuitive, "
-                "accessible and built to convert."
-            ),
+            "desc": "Research-driven UX and UI systems that convert.",
+            "points": [
+                "UX research",
+                "UI design",
+                "Design system",
+                "Prototyping",
+            ],
         },
         {
             "title": "Develop",
-            "desc": (
-                "Clean, scalable engineering on modern stacks — tested "
-                "continuously for performance and security."
-            ),
+            "desc": "Clean, scalable engineering on modern stacks.",
+            "points": [
+                "Frontend & backend",
+                "API development",
+                "Database integration",
+                "Code reviews",
+            ],
         },
         {
-            "title": "Deliver",
-            "desc": (
-                "Seamless deployment, monitoring and 24/7 support — so your "
-                "product keeps growing after launch."
-            ),
+            "title": "Test & Deploy",
+            "desc": "Prove quality, then ship with confidence.",
+            "points": [
+                "QA & testing",
+                "Security validation",
+                "CI/CD",
+                "Production deployment",
+            ],
+        },
+        {
+            "title": "Maintain & Scale",
+            "desc": "Keep the product healthy as usage and scope grow.",
+            "points": [
+                "Monitoring",
+                "Bug fixes",
+                "Performance optimization",
+                "Technical support",
+                "Scaling",
+            ],
         },
     ],
     "expertise_eyebrow": "Services",
