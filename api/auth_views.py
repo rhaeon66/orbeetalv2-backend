@@ -26,7 +26,10 @@ class CsrfView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request):
-        return Response({"csrfToken": get_token(request)})
+        response = Response({"csrfToken": get_token(request)})
+        # A cached body keeps the pre-login token after Django rotates the cookie.
+        response["Cache-Control"] = "no-store"
+        return response
 
 
 class LoginView(APIView):
