@@ -63,7 +63,7 @@ class ProductAdmin(CatalogAdmin):
 @admin.register(TeamMember)
 class TeamMemberAdmin(CatalogAdmin):
     list_display = ("name", "role", "email", "is_active", "sort_order")
-    search_fields = ("name", "role", "email", "bio", "department_name")
+    search_fields = ("name", "role", "email", "bio", "phone", "location", "department_name")
 
 
 @admin.register(Department)
@@ -92,6 +92,10 @@ class ClientAdmin(CatalogAdmin):
 class HomepageContentAdmin(admin.ModelAdmin):
     fieldsets = (
         ("Stats", {"fields": ("stats",)}),
+        (
+            "Hero trust logos",
+            {"fields": ("trust_client_ids",)},
+        ),
         (
             "About",
             {

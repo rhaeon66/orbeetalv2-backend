@@ -92,21 +92,21 @@ FRONTEND_PUBLIC = BASE_DIR.parent / "frontend" / "public"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-FRONTEND_ORIGIN = os.getenv("FRONTEND_ORIGIN", "http://localhost:3000").rstrip("/")
+FRONTEND_ORIGIN = os.getenv("FRONTEND_ORIGIN", "http://localhost:3333").rstrip("/")
 
 CORS_ALLOWED_ORIGINS = env_list(
     "CORS_ALLOWED_ORIGINS",
-    "http://localhost:3000,http://127.0.0.1:3000",
+    "http://localhost:3333,http://127.0.0.1:3333",
 )
 CORS_ALLOW_CREDENTIALS = True
 
 CSRF_TRUSTED_ORIGINS = env_list(
     "CSRF_TRUSTED_ORIGINS",
-    "http://localhost:3000,http://127.0.0.1:3000",
+    "http://localhost:3333,http://127.0.0.1:3333",
 )
 
-# Session cookies are host-bound. The Next.js app on http://localhost:3000
-# must call the API as http://localhost:8000 (same site, different port).
+# Session cookies are host-bound. The Next.js app on http://localhost:3333
+# must call the API as http://localhost:8888 (same site, different port).
 SESSION_COOKIE_SAMESITE = "Lax"
 CSRF_COOKIE_SAMESITE = "Lax"
 SESSION_COOKIE_HTTPONLY = True

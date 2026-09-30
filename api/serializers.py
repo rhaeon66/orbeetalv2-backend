@@ -262,6 +262,55 @@ class FeaturesField(serializers.ListField):
         return parsed if isinstance(parsed, list) else None
 
 
+class ObjectListField(LooseJSONField):
+    """List of objects stored as JSON, including FormData string payloads."""
+
+    def to_internal_value(self, data):
+        value = super().to_internal_value(data)
+        if value in (None, ""):
+            return []
+        if not isinstance(value, list):
+            raise serializers.ValidationError("Enter a list of items.")
+        return value
+
+
+def clean_portfolio(items):
+    cleaned = []
+    for item in items:
+        if not isinstance(item, dict):
+            raise serializers.ValidationError("Each portfolio item needs a title.")
+        title = str(item.get("title") or "").strip()
+        if not title:
+            continue
+        url = str(item.get("url") or "").strip()
+        if url:
+            url = clean_href(url)
+        cleaned.append(
+            {
+                "title": title[:200],
+                "description": str(item.get("description") or "").strip()[:600],
+                "url": url,
+                "year": str(item.get("year") or "").strip()[:20],
+            }
+        )
+    return cleaned
+
+
+def clean_details(items):
+    cleaned = []
+    for item in items:
+        if not isinstance(item, dict):
+            raise serializers.ValidationError("Each detail needs a label and a value.")
+        label = str(item.get("label") or "").strip()
+        value = str(item.get("value") or "").strip()
+        if not label and not value:
+            continue
+        if not label or not value:
+            raise serializers.ValidationError("Each detail needs both a label and a value.")
+        cleaned.append({"label": label[:80], "value": value[:300]})
+    return cleaned
+
+
 def clean_href(value):
     value = (value or "").strip()
     if not value:
@@ -392,6 +441,7 @@ class ProjectSerializer(CatalogWriteMixin, MediaAttachMixin, serializers.ModelSe
     logo = cms_image()
     related_image = cms_image()
     features = FeaturesField(required=False)
+    stack = FeaturesField(required=False)
     url = serializers.URLField(required=False, allow_blank=True, default="")
 
     class Meta:
@@ -401,8 +451,11 @@ class ProjectSerializer(CatalogWriteMixin, MediaAttachMixin, serializers.ModelSe
             "name",
             "description",
             "category",
+            "status",
+            "project_type",
             "url",
             "features",
+            "stack",
             "image",
             "image_url",
             "logo",
@@ -442,6 +495,16 @@ class ProjectSerializer(CatalogWriteMixin, MediaAttachMixin, serializers.ModelSe
     def validate_features(self, value):
         cleaned = [item.strip() for item in value if str(item).strip()]
         return cleaned[:24]
+
+    def validate_stack(self, value):
+        cleaned = [item.strip() for item in value if str(item).strip()]
+        return cleaned[:24]
+
+    def validate_status(self, value):
+        allowed = {choice for choice, _label in Project.STATUS_CHOICES}
+        if value not in allowed:
+            raise serializers.ValidationError("Choose a valid status.")
+        return value
 
 
 class PublicProjectSerializer(serializers.ModelSerializer):
@@ -552,6 +615,19 @@ class PublicServiceSerializer(serializers.ModelSerializer):
         return absolute_file_url(self.context.get("request"), obj.image, obj.image_fallback)
 
 
+TEAM_LINK_FIELDS = (
+    "website",
+    "linkedin",
+    "github",
+    "facebook",
+    "instagram",
+    "x_url",
+    "youtube",
+    "behance",
+    "dribbble",
+)
+
+
 class TeamMemberSerializer(CatalogWriteMixin, MediaAttachMixin, serializers.ModelSerializer):
     media_source_map = {"image_from_media": ("image", "image_fallback")}
     image_url = serializers.SerializerMethodField()
@@ -560,6 +636,8 @@ class TeamMemberSerializer(CatalogWriteMixin, MediaAttachMixin, serializers.Mode
     experience = serializers.IntegerField(min_value=0, required=False)
     projects = serializers.IntegerField(min_value=0, required=False)
     expertise = FeaturesField(required=False)
+    portfolio = ObjectListField(required=False)
+    details = ObjectListField(required=False)
     department_roles = FeaturesField(required=False)
     department_productions = FeaturesField(required=False)
 
@@ -570,12 +648,25 @@ class TeamMemberSerializer(CatalogWriteMixin, MediaAttachMixin, serializers.Mode
             "name",
             "role",
             "email",
+            "phone",
+            "location",
             "bio",
             "image",
             "image_url",
+            "website",
+            "linkedin",
+            "github",
+            "facebook",
+            "instagram",
+            "x_url",
+            "youtube",
+            "behance",
+            "dribbble",
             "experience",
             "projects",
             "expertise",
+            "portfolio",
+            "details",
             "department_name",
             "department_description",
             "department_roles",
@@ -583,7 +674,12 @@ class TeamMemberSerializer(CatalogWriteMixin, MediaAttachMixin, serializers.Mode
             "is_active",
             "sort_order",
         )
-        extra_kwargs = {"image": {"write_only": True}}
+        extra_kwargs = {
+            "image": {"write_only": True},
+            **{field: {"required": False, "allow_blank": True} for field in TEAM_LINK_FIELDS},
+            "phone": {"required": False, "allow_blank": True},
+            "location": {"required": False, "allow_blank": True},
+        }
 
     def get_image_url(self, obj):
         return absolute_file_url(self.context.get("request"), obj.image, obj.image_fallback)
@@ -593,6 +689,32 @@ class TeamMemberSerializer(CatalogWriteMixin, MediaAttachMixin, serializers.Mode
         if not value:
             raise serializers.ValidationError("Enter a member name.")
         return value
+
+    def validate_phone(self, value):
+        return (value or "").strip()[:40]
+
+    def validate_location(self, value):
+        return (value or "").strip()[:160]
+
+    def validate_portfolio(self, value):
+        return clean_portfolio(value or [])
+
+    def validate_details(self, value):
+        return clean_details(value or [])
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        errors = {}
+        for field in TEAM_LINK_FIELDS:
+            if field not in attrs:
+                continue
+            try:
+                attrs[field] = clean_href(attrs.get(field) or "")
+            except serializers.ValidationError as exc:
+                errors[field] = exc.detail
+        if errors:
+            raise serializers.ValidationError(errors)
+        return attrs
 
 
 class PublicTeamMemberSerializer(serializers.ModelSerializer):
@@ -607,11 +729,24 @@ class PublicTeamMemberSerializer(serializers.ModelSerializer):
             "name",
             "role",
             "email",
+            "phone",
+            "location",
             "bio",
             "image",
+            "website",
+            "linkedin",
+            "github",
+            "facebook",
+            "instagram",
+            "x_url",
+            "youtube",
+            "behance",
+            "dribbble",
             "experience",
             "projects",
             "expertise",
+            "portfolio",
+            "details",
             "department",
             "sort_order",
         )
@@ -640,6 +775,7 @@ class ProductSerializer(CatalogWriteMixin, MediaAttachMixin, serializers.ModelSe
     image = cms_image()
     screen_image = cms_image()
     features = FeaturesField(required=False)
+    stack = FeaturesField(required=False)
     url = serializers.URLField(required=False, allow_blank=True, default="")
 
     class Meta:
@@ -648,8 +784,10 @@ class ProductSerializer(CatalogWriteMixin, MediaAttachMixin, serializers.ModelSe
             "id",
             "name",
             "description",
+            "project_type",
             "url",
             "features",
+            "stack",
             "image",
             "image_url",
             "screen_image",
@@ -675,6 +813,10 @@ class ProductSerializer(CatalogWriteMixin, MediaAttachMixin, serializers.ModelSe
         if not value:
             raise serializers.ValidationError("Enter a product title.")
         return value
+
+    def validate_stack(self, value):
+        cleaned = [item.strip() for item in value if str(item).strip()]
+        return cleaned[:24]
 
 
 class PublicProductSerializer(serializers.ModelSerializer):
@@ -935,6 +1077,7 @@ class HomepageSerializer(MediaAttachMixin, serializers.ModelSerializer):
     about_image = cms_image()
     why_image = cms_image()
     stats = LooseJSONField(required=False)
+    trust_client_ids = LooseJSONField(required=False)
     about_highlights = LooseJSONField(required=False)
     why_items = LooseJSONField(required=False)
     method_steps = LooseJSONField(required=False)
@@ -944,6 +1087,7 @@ class HomepageSerializer(MediaAttachMixin, serializers.ModelSerializer):
         model = HomepageContent
         fields = (
             "stats",
+            "trust_client_ids",
             "about_eyebrow",
             "about_title",
             "about_highlight",
@@ -993,6 +1137,20 @@ class HomepageSerializer(MediaAttachMixin, serializers.ModelSerializer):
             return []
         return [row for row in (_clean_stat(item) for item in value) if row]
 
+    def validate_trust_client_ids(self, value):
+        if not value:
+            return []
+        cleaned = []
+        for raw in value:
+            try:
+                client_id = int(raw)
+            except (TypeError, ValueError):
+                continue
+            if client_id > 0 and client_id not in cleaned:
+                cleaned.append(client_id)
+        known = set(Client.objects.filter(pk__in=cleaned).values_list("pk", flat=True))
+        return [client_id for client_id in cleaned if client_id in known]
+
     def validate_about_highlights(self, value):
         return _clean_named_items(value or [], "label", ["text"])
 
@@ -1009,8 +1167,38 @@ class HomepageSerializer(MediaAttachMixin, serializers.ModelSerializer):
         return clean_href(value)
 
 
+def _client_logo(request, client):
+    return absolute_file_url(request, client.logo, client.logo_fallback)
+
+
+def _trust_logos(request, obj):
+    chosen = []
+    for raw in obj.trust_client_ids or []:
+        try:
+            client_id = int(raw)
+        except (TypeError, ValueError):
+            continue
+        if client_id not in chosen:
+            chosen.append(client_id)
+    if chosen:
+        found = {
+            client.pk: client
+            for client in Client.objects.filter(pk__in=chosen, is_active=True)
+        }
+        clients = [found[client_id] for client_id in chosen if client_id in found]
+    else:
+        clients = list(Client.objects.filter(is_active=True).order_by("sort_order", "id")[:4])
+    logos = []
+    for client in clients:
+        logo = _client_logo(request, client)
+        if logo:
+            logos.append({"id": client.pk, "name": client.name, "logo": logo})
+    return logos
+
+
 class PublicHomepageSerializer(serializers.ModelSerializer):
     stats = serializers.SerializerMethodField()
+    trust_logos = serializers.SerializerMethodField()
     about = serializers.SerializerMethodField()
     why = serializers.SerializerMethodField()
     methodology = serializers.SerializerMethodField()
@@ -1018,10 +1206,13 @@ class PublicHomepageSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = HomepageContent
-        fields = ("stats", "about", "why", "methodology", "expertise")
+        fields = ("stats", "trust_logos", "about", "why", "methodology", "expertise")
 
     def get_stats(self, obj):
         return [row for row in (_clean_stat(item) for item in (obj.stats or [])) if row]
+
+    def get_trust_logos(self, obj):
+        return _trust_logos(self.context.get("request"), obj)
 
     def get_about(self, obj):
         request = self.context.get("request")

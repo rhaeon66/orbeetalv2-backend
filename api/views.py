@@ -133,8 +133,14 @@ class AdminPortfolioDownload(APIView):
     permission_classes = [IsStaffUser]
     renderer_classes = [JSONRenderer, BinaryFileRenderer]
 
-    def get(self, request):
-        payload = build_portfolio_pdf()
+    def post(self, request):
+        try:
+            payload = build_portfolio_pdf(
+                request.data.get("projects") or [],
+                request.data.get("products") or [],
+            )
+        except ValueError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         stamp = timezone.now().date().isoformat()
         response = HttpResponse(payload, content_type="application/pdf")
         response["Content-Disposition"] = (

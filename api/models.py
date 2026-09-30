@@ -141,6 +141,14 @@ class Project(CatalogItem):
         (CATEGORY_PARTNERSHIP, "Partnerships"),
         (CATEGORY_CLIENT, "Client Projects"),
     ]
+    STATUS_FINISHED = "finished"
+    STATUS_RUNNING = "running"
+    STATUS_UPCOMING = "upcoming"
+    STATUS_CHOICES = [
+        (STATUS_FINISHED, "Finished"),
+        (STATUS_RUNNING, "Running"),
+        (STATUS_UPCOMING, "Upcoming"),
+    ]
 
     description = models.CharField(max_length=500, blank=True)
     category = models.CharField(
@@ -148,8 +156,15 @@ class Project(CatalogItem):
         choices=CATEGORY_CHOICES,
         default=CATEGORY_CLIENT,
     )
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default=STATUS_FINISHED,
+    )
+    project_type = models.CharField(max_length=80, blank=True)
     url = models.URLField(blank=True)
     features = models.JSONField(default=list, blank=True)
+    stack = models.JSONField(default=list, blank=True)
     image = models.ImageField(
         upload_to=project_image_upload,
         blank=True,
@@ -185,8 +200,10 @@ class Service(CatalogItem):
 
 class Product(CatalogItem):
     description = models.TextField(blank=True)
+    project_type = models.CharField(max_length=80, blank=True)
     url = models.URLField(blank=True)
     features = models.JSONField(default=list, blank=True)
+    stack = models.JSONField(default=list, blank=True)
     image = models.ImageField(
         upload_to=product_image_upload,
         blank=True,
@@ -211,9 +228,22 @@ class TeamMember(CatalogItem):
         validators=[validate_image_file],
     )
     image_fallback = models.CharField(max_length=500, blank=True)
+    phone = models.CharField(max_length=40, blank=True)
+    location = models.CharField(max_length=160, blank=True)
+    website = models.URLField(blank=True)
+    linkedin = models.URLField(blank=True)
+    github = models.URLField(blank=True)
+    facebook = models.URLField(blank=True)
+    instagram = models.URLField(blank=True)
+    x_url = models.URLField(blank=True)
+    youtube = models.URLField(blank=True)
+    behance = models.URLField(blank=True)
+    dribbble = models.URLField(blank=True)
     experience = models.PositiveIntegerField(default=0)
     projects = models.PositiveIntegerField(default=0)
     expertise = models.JSONField(default=list, blank=True)
+    portfolio = models.JSONField(default=list, blank=True)
+    details = models.JSONField(default=list, blank=True)
     department_name = models.CharField(max_length=120, blank=True)
     department_description = models.TextField(blank=True)
     department_roles = models.JSONField(default=list, blank=True)
@@ -274,6 +304,7 @@ class Client(CatalogItem):
 
 class HomepageContent(models.Model):
     stats = models.JSONField(default=list, blank=True)
+    trust_client_ids = models.JSONField(default=list, blank=True)
     about_eyebrow = models.CharField(max_length=120, blank=True)
     about_title = models.CharField(max_length=255, blank=True)
     about_highlight = models.CharField(max_length=255, blank=True)

@@ -64,7 +64,7 @@ class PublicProjectList(ListAPIView):
     permission_classes = [AllowAny]
     serializer_class = PublicProjectSerializer
     pagination_class = None
-    queryset = Project.objects.filter(is_active=True)
+    queryset = Project.objects.filter(is_active=True, status=Project.STATUS_FINISHED)
 
 
 class PublicServiceList(ListAPIView):

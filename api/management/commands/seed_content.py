@@ -84,6 +84,20 @@ SLIDES = [
         "secondary_cta_label": "Explore More",
         "secondary_cta_href": "/services",
     },
+    {
+        "name": "Cyber Security",
+        "headline": "Cyber Security",
+        "accent": "Guided Protection",
+        "description": (
+            "Protect your business with monitoring, response, and compliance "
+            "built around the systems you already run."
+        ),
+        "image_fallback": "/images/hero/cyber.svg",
+        "primary_cta_label": "Talk to Us",
+        "primary_cta_href": "/contact",
+        "secondary_cta_label": "Explore Services",
+        "secondary_cta_href": "/services",
+    },
 ]
 
 PROJECTS = [
@@ -259,7 +273,7 @@ SERVICES = [
             "Scalable, secure, and high-performing software.",
             "Quality assurance and timely delivery.",
         ],
-        "image_fallback": "/images/software.png",
+        "image_fallback": "/images/hero/web.svg",
     },
     {
         "name": "AI Solutions",
@@ -273,7 +287,7 @@ SERVICES = [
             "Data analytics to help make data-driven decisions.",
             "Enhance efficiency and innovation.",
         ],
-        "image_fallback": "/images/chatbot.png",
+        "image_fallback": "/images/hero/ai.svg",
     },
     {
         "name": "Digital Marketing",
@@ -287,7 +301,7 @@ SERVICES = [
             "Content creation to drive traffic and awareness.",
             "Strategies to improve brand visibility and sales.",
         ],
-        "image_fallback": "/images/dig.png",
+        "image_fallback": "/images/hero/growth.svg",
     },
     {
         "name": "Product Design",
@@ -300,7 +314,7 @@ SERVICES = [
             "User testing and implementation for seamless user experiences.",
             "Prototyping to validate concepts.",
         ],
-        "image_fallback": "/images/product-design.jpg",
+        "image_fallback": "/images/hero/mobile.svg",
     },
     {
         "name": "Web Development",
@@ -314,7 +328,7 @@ SERVICES = [
             "CMS integration for easy content management.",
             "SEO optimization to ensure search engine visibility.",
         ],
-        "image_fallback": "/images/web-development.svg",
+        "image_fallback": "/images/hero/web.svg",
     },
     {
         "name": "Cyber Security",
@@ -327,7 +341,7 @@ SERVICES = [
             "Threat detection and response systems.",
             "Compliance with industry regulations.",
         ],
-        "image_fallback": "/images/cyber.png",
+        "image_fallback": "/images/hero/cyber.svg",
     },
 ]
 
@@ -756,6 +770,13 @@ HOMEPAGE = {
             "suffix": "+",
             "label": "Active Projects",
             "description": "Currently in development",
+            "featured": False,
+        },
+        {
+            "value": 5,
+            "suffix": "+",
+            "label": "Own Products",
+            "description": "Designed and shipped in-house",
             "featured": False,
         },
     ],
