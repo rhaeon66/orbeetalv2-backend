@@ -5,3 +5,4 @@ python-dotenv>=1.0,<2
 gunicorn>=23,<24
 Pillow>=10,<12
 reportlab>=4.2,<5
+svglib>=1.5,<3

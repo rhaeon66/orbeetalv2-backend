@@ -46,6 +46,7 @@ IMAGE_USAGE = (
         HomepageContent,
         "Homepage",
         (
+            ("brand_logo", "brand_logo_fallback"),
             ("about_image", "about_image_fallback"),
             ("why_image", "why_image_fallback"),
         ),

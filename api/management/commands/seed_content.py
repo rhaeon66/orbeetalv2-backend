@@ -733,20 +733,24 @@ DEPARTMENTS = [
 ]
 
 CLIENTS = [
-    {"name": "Ruet Reporters Unity", "url": "", "logo_fallback": "/images/client.jpg"},
+    {
+        "name": "Ruet Reporters Unity",
+        "url": "https://www.rru24.com",
+        "logo_fallback": "/images/client.jpg",
+    },
     {
         "name": "Airy International",
-        "url": "",
+        "url": "https://www.airyfiltration.com.bd",
         "logo_fallback": "/images/mockups/airy-logo.webp",
     },
     {
         "name": "Cleanroom AC",
-        "url": "",
+        "url": "https://www.cleanroomac.com",
         "logo_fallback": "/images/mockups/cleanroom-logo.webp",
     },
-    {"name": "MUNA", "url": "", "logo_fallback": "/images/mockups/muna-logo.png"},
-    {"name": "CloudX Academy", "url": "", "logo_fallback": "/images/cloudx.png"},
-    {"name": "July Heroes", "url": "", "logo_fallback": "/images/july.svg"},
+    {"name": "MUNA", "url": "https://www.munabooks.com", "logo_fallback": "/images/mockups/muna-logo.png"},
+    {"name": "CloudX Academy", "url": "https://www.cloudx.academy", "logo_fallback": "/images/cloudx.png"},
+    {"name": "July Heroes", "url": "https://www.julyheroes.com", "logo_fallback": "/images/july.svg"},
 ]
 
 HOMEPAGE = {

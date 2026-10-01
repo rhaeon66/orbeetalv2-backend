@@ -1,3 +1,4 @@
+from django.db.models import F
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import AllowAny
 from rest_framework.generics import (
@@ -23,9 +24,11 @@ from .models import (
     Service,
     Slide,
     TeamMember,
+    Technology,
     Testimonial,
 )
 from .permissions import IsStaffUser
+from .technologies import canonical_name, ensure_technology_catalog, remember_technology
 from .serializers import (
     ClientSerializer,
     DepartmentSerializer,
@@ -39,6 +42,7 @@ from .serializers import (
     PublicFAQSerializer,
     PublicHomepageSerializer,
     PublicProductSerializer,
+    PublicSiteSerializer,
     PublicProjectSerializer,
     PublicServiceSerializer,
     PublicSlideSerializer,
@@ -47,6 +51,7 @@ from .serializers import (
     ServiceSerializer,
     SlideSerializer,
     TeamMemberSerializer,
+    TechnologySerializer,
     TestimonialSerializer,
 )
 
@@ -248,6 +253,15 @@ class PublicClientList(ListAPIView):
     queryset = Client.objects.filter(is_active=True)
 
 
+class PublicSite(RetrieveAPIView):
+    authentication_classes = []
+    permission_classes = [AllowAny]
+    serializer_class = PublicSiteSerializer
+
+    def get_object(self):
+        return _homepage()
+
+
 class PublicHomepage(RetrieveAPIView):
     authentication_classes = []
     permission_classes = [AllowAny]
@@ -287,6 +301,40 @@ class AdminMediaListCreate(ListCreateAPIView):
     parser_classes = [MultiPartParser, FormParser, JSONParser]
     pagination_class = None
     queryset = MediaAsset.objects.all()
+
+
+class AdminTechnologyListCreate(ListCreateAPIView):
+    permission_classes = [IsStaffUser]
+    serializer_class = TechnologySerializer
+    pagination_class = None
+
+    def get_queryset(self):
+        ensure_technology_catalog()
+        query = (self.request.query_params.get("q") or "").strip()
+        queryset = Technology.objects.all().order_by(
+            F("last_used_at").desc(nulls_last=True),
+            "name",
+        )
+        if query:
+            queryset = queryset.filter(name__icontains=query)
+        return queryset
+
+    def create(self, request, *args, **kwargs):
+        ensure_technology_catalog()
+        name = str(request.data.get("name") or "").strip()
+        if not name:
+            return Response({"name": ["Enter a technology name."]}, status=status.HTTP_400_BAD_REQUEST)
+        if len(name) > 80:
+            return Response(
+                {"name": ["Use 80 characters or fewer."]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        existed = Technology.objects.filter(name__iexact=canonical_name(name)).exists()
+        tech = remember_technology(name)
+        return Response(
+            TechnologySerializer(tech).data,
+            status=status.HTTP_200_OK if existed else status.HTTP_201_CREATED,
+        )
 
 
 class AdminMediaDetail(RetrieveUpdateDestroyAPIView):

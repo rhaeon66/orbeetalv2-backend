@@ -15,12 +15,14 @@ from .models import (
     MediaAsset,
     Product,
     Project,
+    Technology,
     Service,
     Slide,
     TeamMember,
     Testimonial,
     validate_image_file,
 )
+from .technologies import present_stack, remember_technology
 
 
 def absolute_file_url(request, file_field, fallback=""):
@@ -32,6 +34,19 @@ def absolute_file_url(request, file_field, fallback=""):
     if isinstance(fallback, str) and fallback.startswith(LIBRARY_MARKER):
         return ""
     return fallback or ""
+
+
+DEFAULT_CONTACT_EMAIL = "support@orbeetal.com"
+DEFAULT_CONTACT_WEBSITE = "www.orbeetal.com"
+DEFAULT_CONTACT_PHONE = "+88 01627480049"
+
+
+def site_contact(obj):
+    return {
+        "email": (getattr(obj, "contact_email", "") or "").strip() or DEFAULT_CONTACT_EMAIL,
+        "website": (getattr(obj, "contact_website", "") or "").strip() or DEFAULT_CONTACT_WEBSITE,
+        "phone": (getattr(obj, "contact_phone", "") or "").strip() or DEFAULT_CONTACT_PHONE,
+    }
 
 
 def cms_image(**kwargs):
@@ -262,6 +277,73 @@ class FeaturesField(serializers.ListField):
         return parsed if isinstance(parsed, list) else None
 
 
+class StackField(serializers.Field):
+    """Technology stack stored as [{name, logo}], including FormData JSON."""
+
+    def to_internal_value(self, data):
+        cleaned = []
+        seen = set()
+        for item in self._coerce(data):
+            if isinstance(item, dict):
+                raw_name = item.get("name") or ""
+                logo = str(item.get("logo") or "").strip()
+            else:
+                raw_name = item
+                logo = ""
+            name = str(raw_name or "").strip()
+            if not name:
+                continue
+            if len(name) > 80:
+                raise serializers.ValidationError(
+                    "Each technology must be 80 characters or fewer."
+                )
+            tech = remember_technology(name, logo)
+            if tech is None or tech.name.casefold() in seen:
+                continue
+            cleaned.append({"name": tech.name, "logo": tech.logo})
+            seen.add(tech.name.casefold())
+            if len(cleaned) >= 24:
+                break
+        return cleaned
+
+    def to_representation(self, value):
+        return present_stack(value)
+
+    def _coerce(self, data):
+        if data in (None, ""):
+            return []
+        if isinstance(data, str):
+            value = data.strip()
+            if not value:
+                return []
+            if value.startswith("["):
+                try:
+                    parsed = json.loads(value)
+                except json.JSONDecodeError as exc:
+                    raise serializers.ValidationError("Enter a valid technology list.") from exc
+                if not isinstance(parsed, list):
+                    raise serializers.ValidationError("Enter a valid technology list.")
+                return parsed
+            return [part.strip() for part in value.split(",") if part.strip()]
+        if isinstance(data, (list, tuple)):
+            if len(data) == 1 and isinstance(data[0], str):
+                nested = self._try_json_list(data[0])
+                if nested is not None:
+                    return nested
+            return list(data)
+        raise serializers.ValidationError("Enter a valid technology list.")
+
+    def _try_json_list(self, value):
+        value = (value or "").strip()
+        if not value.startswith("["):
+            return None
+        try:
+            parsed = json.loads(value)
+        except json.JSONDecodeError:
+            return None
+        return parsed if isinstance(parsed, list) else None
+
+
 class ObjectListField(LooseJSONField):
     """List of objects stored as JSON, including FormData string payloads."""
 
@@ -441,7 +523,7 @@ class ProjectSerializer(CatalogWriteMixin, MediaAttachMixin, serializers.ModelSe
     logo = cms_image()
     related_image = cms_image()
     features = FeaturesField(required=False)
-    stack = FeaturesField(required=False)
+    stack = StackField(required=False)
     url = serializers.URLField(required=False, allow_blank=True, default="")
 
     class Meta:
@@ -496,10 +578,6 @@ class ProjectSerializer(CatalogWriteMixin, MediaAttachMixin, serializers.ModelSe
         cleaned = [item.strip() for item in value if str(item).strip()]
         return cleaned[:24]
 
-    def validate_stack(self, value):
-        cleaned = [item.strip() for item in value if str(item).strip()]
-        return cleaned[:24]
-
     def validate_status(self, value):
         allowed = {choice for choice, _label in Project.STATUS_CHOICES}
         if value not in allowed:
@@ -512,6 +590,7 @@ class PublicProjectSerializer(serializers.ModelSerializer):
     subtitle = serializers.CharField(source="description")
     image = serializers.SerializerMethodField()
     logo = serializers.SerializerMethodField()
+    stack = serializers.SerializerMethodField()
     link = serializers.CharField(source="url")
     supervisor = serializers.SerializerMethodField()
     partner = serializers.SerializerMethodField()
@@ -525,6 +604,7 @@ class PublicProjectSerializer(serializers.ModelSerializer):
             "subtitle",
             "category",
             "features",
+            "stack",
             "image",
             "logo",
             "link",
@@ -553,6 +633,9 @@ class PublicProjectSerializer(serializers.ModelSerializer):
 
     def get_logo(self, obj):
         return absolute_file_url(self.context.get("request"), obj.logo, obj.logo_fallback)
+
+    def get_stack(self, obj):
+        return present_stack(obj.stack)
 
     def get_supervisor(self, obj):
         if obj.category != Project.CATEGORY_OWN:
@@ -775,7 +858,7 @@ class ProductSerializer(CatalogWriteMixin, MediaAttachMixin, serializers.ModelSe
     image = cms_image()
     screen_image = cms_image()
     features = FeaturesField(required=False)
-    stack = FeaturesField(required=False)
+    stack = StackField(required=False)
     url = serializers.URLField(required=False, allow_blank=True, default="")
 
     class Meta:
@@ -814,9 +897,12 @@ class ProductSerializer(CatalogWriteMixin, MediaAttachMixin, serializers.ModelSe
             raise serializers.ValidationError("Enter a product title.")
         return value
 
-    def validate_stack(self, value):
-        cleaned = [item.strip() for item in value if str(item).strip()]
-        return cleaned[:24]
+
+class TechnologySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Technology
+        fields = ("id", "name", "slug", "logo")
+        read_only_fields = fields
 
 
 class PublicProductSerializer(serializers.ModelSerializer):
@@ -1069,11 +1155,14 @@ def _clean_method_steps(items):
 
 class HomepageSerializer(MediaAttachMixin, serializers.ModelSerializer):
     media_source_map = {
+        "brand_logo_from_media": ("brand_logo", "brand_logo_fallback"),
         "about_image_from_media": ("about_image", "about_image_fallback"),
         "why_image_from_media": ("why_image", "why_image_fallback"),
     }
+    brand_logo_url = serializers.SerializerMethodField()
     about_image_url = serializers.SerializerMethodField()
     why_image_url = serializers.SerializerMethodField()
+    brand_logo = cms_image()
     about_image = cms_image()
     why_image = cms_image()
     stats = LooseJSONField(required=False)
@@ -1086,6 +1175,11 @@ class HomepageSerializer(MediaAttachMixin, serializers.ModelSerializer):
     class Meta:
         model = HomepageContent
         fields = (
+            "brand_logo",
+            "brand_logo_url",
+            "contact_email",
+            "contact_website",
+            "contact_phone",
             "stats",
             "trust_client_ids",
             "about_eyebrow",
@@ -1118,9 +1212,15 @@ class HomepageSerializer(MediaAttachMixin, serializers.ModelSerializer):
             "expertise_items",
         )
         extra_kwargs = {
+            "brand_logo": {"write_only": True},
             "about_image": {"write_only": True},
             "why_image": {"write_only": True},
         }
+
+    def get_brand_logo_url(self, obj):
+        return absolute_file_url(
+            self.context.get("request"), obj.brand_logo, obj.brand_logo_fallback
+        )
 
     def get_about_image_url(self, obj):
         return absolute_file_url(
@@ -1163,6 +1263,24 @@ class HomepageSerializer(MediaAttachMixin, serializers.ModelSerializer):
     def validate_expertise_items(self, value):
         return _clean_named_items(value or [], "title", ["description", "icon"])
 
+    def validate_contact_email(self, value):
+        return (value or "").strip()
+
+    def validate_contact_phone(self, value):
+        return (value or "").strip()
+
+    def validate_contact_website(self, value):
+        value = (value or "").strip()
+        if not value:
+            return ""
+        if value.lower().startswith(("http://", "https://")):
+            serializers.URLField().run_validation(value)
+            return value
+        host = value.split("/")[0]
+        if "." in host and " " not in value:
+            return value
+        raise serializers.ValidationError("Enter a website such as www.orbeetal.com.")
+
     def validate_about_cta_href(self, value):
         return clean_href(value)
 
@@ -1194,6 +1312,31 @@ def _trust_logos(request, obj):
         if logo:
             logos.append({"id": client.pk, "name": client.name, "logo": logo})
     return logos
+
+
+class PublicSiteSerializer(serializers.ModelSerializer):
+    logo = serializers.SerializerMethodField()
+    email = serializers.SerializerMethodField()
+    website = serializers.SerializerMethodField()
+    phone = serializers.SerializerMethodField()
+
+    class Meta:
+        model = HomepageContent
+        fields = ("logo", "email", "website", "phone")
+
+    def get_logo(self, obj):
+        return absolute_file_url(
+            self.context.get("request"), obj.brand_logo, obj.brand_logo_fallback
+        )
+
+    def get_email(self, obj):
+        return site_contact(obj)["email"]
+
+    def get_website(self, obj):
+        return site_contact(obj)["website"]
+
+    def get_phone(self, obj):
+        return site_contact(obj)["phone"]
 
 
 class PublicHomepageSerializer(serializers.ModelSerializer):

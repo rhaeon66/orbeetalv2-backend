@@ -66,6 +66,10 @@ def homepage_why_upload(instance, filename):
     return _media_upload("homepage/why", filename)
 
 
+def homepage_logo_upload(instance, filename):
+    return _media_upload("homepage/logo", filename)
+
+
 def media_library_upload(instance, filename):
     return _media_upload("library", filename)
 
@@ -303,6 +307,15 @@ class Client(CatalogItem):
 
 
 class HomepageContent(models.Model):
+    brand_logo = models.ImageField(
+        upload_to=homepage_logo_upload,
+        blank=True,
+        validators=[validate_image_file],
+    )
+    brand_logo_fallback = models.CharField(max_length=500, blank=True)
+    contact_email = models.EmailField(blank=True, default="support@orbeetal.com")
+    contact_website = models.CharField(max_length=255, blank=True, default="www.orbeetal.com")
+    contact_phone = models.CharField(max_length=40, blank=True, default="+88 01627480049")
     stats = models.JSONField(default=list, blank=True)
     trust_client_ids = models.JSONField(default=list, blank=True)
     about_eyebrow = models.CharField(max_length=120, blank=True)
@@ -348,6 +361,21 @@ class HomepageContent(models.Model):
 
     def __str__(self):
         return "Homepage"
+
+
+class Technology(models.Model):
+    name = models.CharField(max_length=80, unique=True)
+    slug = models.SlugField(max_length=80, unique=True)
+    logo = models.CharField(max_length=300, blank=True)
+    last_used_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["name"]
+        verbose_name_plural = "technologies"
+
+    def __str__(self):
+        return self.name
 
 
 LIBRARY_MARKER = "library:"

@@ -13,6 +13,7 @@ from .models import (
     Service,
     Slide,
     TeamMember,
+    Technology,
     Testimonial,
 )
 
@@ -41,6 +42,13 @@ class InquiryAdmin(admin.ModelAdmin):
 class SlideAdmin(CatalogAdmin):
     list_display = ("name", "headline", "is_active", "sort_order")
     search_fields = ("name", "headline", "accent", "description")
+
+
+@admin.register(Technology)
+class TechnologyAdmin(admin.ModelAdmin):
+    list_display = ("name", "slug", "last_used_at")
+    search_fields = ("name", "slug")
+    ordering = ("name",)
 
 
 @admin.register(Project)
@@ -91,6 +99,18 @@ class ClientAdmin(CatalogAdmin):
 @admin.register(HomepageContent)
 class HomepageContentAdmin(admin.ModelAdmin):
     fieldsets = (
+        (
+            "Brand and contact",
+            {
+                "fields": (
+                    "brand_logo",
+                    "brand_logo_fallback",
+                    "contact_website",
+                    "contact_email",
+                    "contact_phone",
+                )
+            },
+        ),
         ("Stats", {"fields": ("stats",)}),
         (
             "Hero trust logos",
