@@ -7,19 +7,28 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
 
 
-def env_bool(name: str, default: str = "False") -> bool:
-    return os.getenv(name, default).lower() in ("true", "1", "yes")
+def env_value(*names: str, default: str = "") -> str:
+    for name in names:
+        value = os.getenv(name)
+        if value not in (None, ""):
+            return value
+    return default
 
 
-def env_list(name: str, default: str = "") -> list[str]:
-    return [item.strip() for item in os.getenv(name, default).split(",") if item.strip()]
+def env_bool(*names: str, default: str = "False") -> bool:
+    return env_value(*names, default=default).lower() in ("true", "1", "yes")
 
 
-SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "django-insecure-orbeetal-local-only")
-DEBUG = env_bool("DJANGO_DEBUG", "True")
+def env_list(*names: str, default: str = "") -> list[str]:
+    return [item.strip() for item in env_value(*names, default=default).split(",") if item.strip()]
+
+
+SECRET_KEY = env_value("SECRET_KEY", "DJANGO_SECRET_KEY", default="django-insecure-orbeetal-local-only")
+DEBUG = env_bool("DEBUG", "DJANGO_DEBUG", default="True")
 ALLOWED_HOSTS = env_list(
+    "ALLOWED_HOSTS",
     "DJANGO_ALLOWED_HOSTS",
-    "localhost,127.0.0.1,backend.orbeetal.com",
+    default="localhost,127.0.0.1,server.orbeetal.com",
 )
 
 INSTALLED_APPS = [
@@ -36,6 +45,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "config.middleware.MediaWhiteNoiseMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -64,12 +74,31 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "config.wsgi.application"
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+if env_value("DB_ENGINE", default="sqlite").lower() in ("postgres", "postgresql"):
+    _db_name = env_value("DB_NAME", "POSTGRES_DB")
+    _db_user = env_value("DB_USER", "POSTGRES_USER")
+    if not _db_name or not _db_user:
+        from django.core.exceptions import ImproperlyConfigured
+
+        raise ImproperlyConfigured("DB_ENGINE=postgres requires DB_NAME and DB_USER.")
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": _db_name,
+            "USER": _db_user,
+            "PASSWORD": env_value("DB_PASSWORD", "POSTGRES_PASSWORD"),
+            "HOST": env_value("DB_HOST", "POSTGRES_HOST", default="127.0.0.1"),
+            "PORT": env_value("DB_PORT", "POSTGRES_PORT", default="5432"),
+            "CONN_MAX_AGE": 60,
+        }
     }
-}
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
+    }
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
@@ -83,10 +112,15 @@ TIME_ZONE = "UTC"
 USE_I18N = True
 USE_TZ = True
 
-STATIC_URL = "static/"
+STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
-MEDIA_URL = "media/"
+MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedStaticFilesStorage"},
+}
+WHITENOISE_AUTOREFRESH = True
 MEDIA_ROOT.mkdir(parents=True, exist_ok=True)
 FRONTEND_PUBLIC = BASE_DIR.parent / "frontend" / "public"
 
@@ -113,6 +147,10 @@ SESSION_COOKIE_HTTPONLY = True
 CSRF_COOKIE_HTTPONLY = False
 SESSION_COOKIE_SECURE = not DEBUG
 CSRF_COOKIE_SECURE = not DEBUG
+SECURE_CONTENT_TYPE_NOSNIFF = True
+if not DEBUG:
+    # Nginx terminates TLS and proxies to Gunicorn.
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
